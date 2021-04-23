@@ -11,6 +11,13 @@ if os.path.exists("data.json") == False:
 
 loop = asyncio.get_event_loop()
 me = Me()
+from . import smartstuff
+
+#s = smartstuff.RelatedServerFinder(me)
+
+#s.find_patterns()
+
+
 loop.create_task(me.begin())
 loop.create_task(me.main_loop())
 loop.run_forever()

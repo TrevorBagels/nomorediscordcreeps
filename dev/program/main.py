@@ -79,23 +79,26 @@ class Me(discord.Client):
 		server = None
 		if message.guild != None:
 			server = message.guild.id
-		
-		self.process_user(message.author.id, server=server, joined=message.author.joined_at, name=message.author.name, bot=message.author.bot)
+		joined_at = None
+		if hasattr(message.author, "joined_at"): joined_at = message.author.joined_at
+		self.process_user(message.author.id, server=server, joined=joined_at, name=message.author.name, bot=message.author.bot)
 		for x in message.mentions:
-			self.process_user(x.id, server=server, joined=x.joined_at, name=x.name, bot=x.bot)
+			joined_at = None
+			if hasattr(x, "joined_at"): joined_at = x.joined_at
+			self.process_user(x.id, server=server, joined=joined_at, name=x.name, bot=x.bot)
 	
 	async def main_loop(self):
 		while True:
 			#check on new members in the queue
 			if len(self.data.user_processing_queue) > 0:
+				#process user
 				await self.fully_process_user(self.data.user_processing_queue[0]) #!makes api calls
+				#remove processed user from the queue
 				self.data.user_processing_queue.remove(self.data.user_processing_queue[0])
 			if (now() - self.last_save).total_seconds() > self.config.save_frequency:
 				self.save()
 				self.last_save = now()
 			await asyncio.sleep(.5)
-
-
 
 
 	def process_server(self, server_id, name=None):
@@ -123,6 +126,7 @@ class Me(discord.Client):
 		if server is not None and int(server) not in self.data.users[str(user_id)].servers: #add server if provided
 			self.process_server(server)
 			self.data.users[str(user_id)].servers.append(int(server))
+			self.data.servers[str(server)].members[str(user_id)] = D.Member(user_id=user_id)
 			if joined != None:
 				self.data.servers[str(server)].members[str(user_id)].user_joined = joined
 	
