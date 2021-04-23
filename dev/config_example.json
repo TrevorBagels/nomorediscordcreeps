@@ -1,8 +1,9 @@
 {
 	"token": "",
-	"check_frequency": 30,
+	"check_frequency": 5,
 	"ignore_users": [],
 	"ignore_servers": [],
+	"servers_alert_level": 3,
 	"pushover_token": "",
 	"pushover_user": ""
 }

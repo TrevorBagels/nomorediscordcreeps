@@ -9,7 +9,7 @@ from .notify import Notifier
 
 class Config(prodict.Prodict):
 	token:				str
-	check_frequency:	int #how frequently, in minutes, to do a profile check on someone. ideally, this should be no less than 30 minutes, but it really depends on the size of the servers you're in, and what your threat model is.
+	check_frequency:	int #how frequently, in minutes, to do a profile check on someone.
 	servers_alert_level:	int #how many mutual servers does someone need to be in to be considered a potential threat?
 	ignore_servers:			list[int] #servers to ignore
 	ignore_users:			list[int] #users to ignore
@@ -22,8 +22,8 @@ class Config(prodict.Prodict):
 	def init(self):
 		self.ignore_servers = []
 		self.ignore_users = []
-		self.check_frequency = .1
-		self.servers_alert_level = 2
+		self.check_frequency = 5 #minutes
+		self.servers_alert_level = 3
 		self.save_frequency = 5
 		self.bots_can_stalk = False
 		self.friends_can_stalk = False
@@ -104,7 +104,7 @@ class Me(discord.Client):
 		if str(user_id) not in self.data.users:
 			self.data.users[str(user_id)] = D.User(user_id=user_id, servers=[], last_profile_check=long_ago(), bot=bot)
 			if name is not None: self.data.users[str(user_id)].username = name
-
+		
 		if (now() - self.data.users[str(user_id)].last_profile_check).total_seconds() / 60 >= self.config.check_frequency:
 			self.data.user_processing_queue.append(user_id)
 		if server is not None and int(server) not in self.data.users[str(user_id)].servers: #add server if provided
