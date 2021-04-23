@@ -9,6 +9,8 @@ Disclaimer: This turns your account into a passive selfbot. It won't send any me
 
 ## Setup and installation
 
+This program uses [pushover](https://pushover.net/). You can edit `/dev/notify.py` to easily implement a different method of notifying yourself.
+
 First, do some configuration. You'll need your discord token (`token`), Pushover application key (`pushover_token`), and Pushover user key (`pushover_user`). Set this all up in `/dev/config.json`. `config.json` probably doesn't exist, so just rename `config_example.json` to `config.json` and use that. 
 
 Next, install the requirements.
