@@ -5,5 +5,6 @@
 	"ignore_servers": [],
 	"servers_alert_level": 3,
 	"pushover_token": "",
-	"pushover_user": ""
+	"pushover_user": "",
+	"scrape_amount": 2
 }

@@ -62,7 +62,7 @@ class Server(Prodict):
 
 class Stalker(Prodict):
 	user_id:		int
-	server_hash:	int
+	server_hash:	str
 	time_found:		datetime
 	def init(self):
 		self.time_found = now()
@@ -72,8 +72,10 @@ class SaveData(Prodict):
 	users:					dict[str, User]
 	user_processing_queue:	list[int]
 	stalkers:				dict[str, Stalker]
+	first_time:				bool
 	def init(self):
 		self.servers = {}
+		self.first_time = True
 		self.users = {}
 		self.user_processing_queue = []
 		self.stalkers = {}
