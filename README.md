@@ -24,5 +24,5 @@ python3 -m program
 
 Todo:
 * implement ignoring friends
-* pattern recognition; if a few servers are somehow connected, and lots of people have those few servers as mutual servers for you, the program should automatically ignore those combos of mutual servers.\
+* pattern recognition; if a few servers are somehow connected, and lots of people have those few servers as mutual servers for you, the program should automatically ignore those combos of mutual servers.
 * detect when people are talking about specific topics using NLP
