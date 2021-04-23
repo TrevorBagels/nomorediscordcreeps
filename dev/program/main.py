@@ -1,11 +1,14 @@
 from collections import UserDict
 from datetime import datetime
 from discord.ext import tasks
-import discord, prodict, asyncio, json, requests
+import discord, prodict, asyncio, json, requests, sys
 from bson import json_util
 from . import data as D
 from .utils import now, long_ago
 from .notify import Notifier
+from . import smartstuff
+import cloudscraper, faker, random
+
 
 class Config(prodict.Prodict):
 	token:				str
@@ -20,16 +23,20 @@ class Config(prodict.Prodict):
 	friends_can_stalk:		bool #ignore friends
 	scrape_amount:			int #amount of messages to scrape for the initial scrape, divided by 50.
 	false_positive_level:	int #how many people need to be found in clusters of servers for that cluster of servers to be considered a related server cluster?
+	block_scanning:			bool #whether to stop scanning user profiles. used when getting ratelimited
+	disable_stalker_flagging:	bool #set this to true if you don't want to check for stalkers. this is automatically true while doing an initial scan
 
 	def init(self):
 		self.ignore_servers = []
 		self.ignore_users = []
 		self.check_frequency = 5 #minutes
 		self.servers_alert_level = 3
-		self.save_frequency = 5
+		self.save_frequency = 30
 		self.bots_can_stalk = False
 		self.friends_can_stalk = False
 		self.scrape_amount = 1
+		self.block_scanning = False
+		self.disable_stalker_flagging = False
 
 
 class Me(discord.Client):
@@ -39,20 +46,36 @@ class Me(discord.Client):
 		self.last_save = now()
 		self.token = self.config.token
 		self.load()
+		self.cluster_finder = smartstuff.RelatedServerFinder(self)
 		self.notifier = Notifier(self)
-		self.auth = {"authorization": self.token}
+		self.cloudscraper = cloudscraper.create_scraper()
+		self.faker = faker.Faker()
+		self.auth = {"authorization": self.token, "user-agent": self.faker.user_agent()}
+		self.has_connected = False
+
+		self.req_log = []
 		discord.Client.__init__(self, self_bot=True)
 	
+	def get(self, url, headers={}):
+		req = requests.get(url, headers=headers)
+		#req = self.cloudscraper.get(url, headers=headers)
+		self.req_log.append([url, req.content.decode(), str(req.headers), str(req.cookies)])
+		return req
+
+
+
 	def save(self):
 		with open("data.json", "w") as f:
 			f.write(json.dumps(self.data.to_dict(is_recursive=True), default=json_util.default, indent=4))
+		with open("requestslog.json", "w+") as f:
+			f.write(json.dumps(self.req_log, default=json_util.default, indent=4))
 	
 	def load(self):
 		with open("data.json", "r") as f:
 			self.data:D.SaveData = D.SaveData.from_dict(json.loads(f.read(), object_hook=json_util.object_hook))
 
 	def get_friends(self): #!makes a single api call
-		relationships_req = requests.get(f"https://discord.com/api/v9/users/@me/relationships", headers=self.auth)
+		relationships_req = self.get(f"https://discord.com/api/v9/users/@me/relationships", headers=self.auth)
 		friends = []
 		if relationships_req.ok:
 			for x in relationships_req.json():
@@ -66,16 +89,22 @@ class Me(discord.Client):
 		print(self.user.display_name + " connected to Discord!")
 		if self.user.id not in self.config.ignore_users:
 			self.config.ignore_users.append(self.user.id)
+		
 		if self.config.friends_can_stalk == False:
 			for x in self.get_friends():
 				if x not in self.config.ignore_users:
 					self.config.ignore_users.append(x)
-		
 		if self.data.first_time:
 			self.data.first_time = False
 			await self.initial_scrape()
+		self.cluster_finder.find_patterns() #identify related servers to avoid false positives		
+		self.config.disable_stalker_flagging = self.disable_stalker_flagging_original #set stalker detection to the original value
+		self.has_connected = True
 	
+
 	async def begin(self):
+		self.disable_stalker_flagging_original = self.config.disable_stalker_flagging #temporarily disable stalker detection
+		self.config.disable_stalker_flagging = True
 		await self.start(self.token, bot=False)
 
 	#async def on_member_join(self, member:discord.Member): doesn't work
@@ -97,27 +126,44 @@ class Me(discord.Client):
 	
 	async def main_loop(self):
 		while True:
+			while self.has_connected == False:
+				print("getting ready...")
+				await asyncio.sleep(.1)
 			#check on new members in the queue
-			if len(self.data.user_processing_queue) > 0:
-				#process user
-				await self.fully_process_user(self.data.user_processing_queue[0]) #!makes api calls
-				#remove processed user from the queue
-				self.data.user_processing_queue.remove(self.data.user_processing_queue[0])
+			if self.config.block_scanning == False:
+				for i in range(2):
+					if len(self.data.user_processing_queue) > 0:
+						#process user
+						req = await self.fully_process_user(self.data.user_processing_queue[0]) #!makes api calls
+						#because i'm scared of ratelimiting
+						if "ratelimit" in req.content.decode().lower() or "ratelimit" in str(req.headers).lower():
+							print("VVV RATELIMITING? VVV")
+							print(req.content.decode())
+							print(req.headers)
+							print("^^^ RATELIMITING? ^^^")
+							sys.exit()
+						
+						#remove processed user from the queue
+						self.data.user_processing_queue.remove(self.data.user_processing_queue[0])
+						if req.ok == False and req.json()['code'] != 50001:
+							await asyncio.sleep(3 + random.random() * 5) #sleep, we probably made a bad request. too many of these is bad. hopefully we aren't being ratelimited
+						await asyncio.sleep(.78 + random.random() * 2.5)
+			
 			if (now() - self.last_save).total_seconds() > self.config.save_frequency:
 				self.save()
 				self.last_save = now()
-			await asyncio.sleep(.5)
+			await asyncio.sleep(.5 + random.random() * 3)
 
 
 	async def initial_scrape(self): #! MAKES LOTS OF API CALLS. I MEAN   L O T S   O F   T H E M
 		"""This method scrapes and processes messages from all servers.
 		 It takes awhile, but can generate a decent amount of data.
 		"""
-		
-		me_req = requests.get(f"https://discord.com/api/v9/users/{self.user.id}/profile", headers=self.auth)
+		#region scraping stuff
+		me_req = self.get(f"https://discord.com/api/v9/users/{self.user.id}/profile", headers=self.auth)
 		profile:D.Profile_API = D.Profile_API.from_dict(me_req.json())
 		for guild in profile.mutual_guilds:
-			channels = requests.get(f"https://discord.com/api/v9/guilds/{guild.id}/channels", headers=self.auth)
+			channels = self.get(f"https://discord.com/api/v9/guilds/{guild.id}/channels", headers=self.auth)
 			for c in channels.json():
 				if c['type'] != 0 or 'last_message_id' not in c: continue
 				#get the channel permissions (removed this because it doesn't work or something and i'm tired)
@@ -131,7 +177,7 @@ class Me(discord.Client):
 				last_message = c['last_message_id']
 				
 				for i in range(self.config.scrape_amount):
-					msgs = requests.get(f"https://discord.com/api/v9/channels/{c['id']}/messages?before={last_message}&limit=50", headers=self.auth).json()
+					msgs = self.get(f"https://discord.com/api/v9/channels/{c['id']}/messages?before={last_message}&limit=50", headers=self.auth).json()
 					for x in msgs:
 						if type(x) == str: 
 							msgs = "NO" * 100 #thats more than 50, so it should break the loop and skip this channel
@@ -145,8 +191,10 @@ class Me(discord.Client):
 					await asyncio.sleep(.08)
 			
 			print(f"scraped {guild.id}")
-
+		#endregion
 		print('initial scrape done!')
+		
+		
 					
 					
 					
@@ -161,7 +209,7 @@ class Me(discord.Client):
 			self.data.servers[str(server_id)].server_name = name
 		
 	def fully_process_server(self, server_id):
-		server_req = requests.get(f"https://discord.com/api/v9/guilds/{server_id}", headers=self.auth)
+		server_req = self.get(f"https://discord.com/api/v9/guilds/{server_id}", headers=self.auth)
 		if server_req.ok:
 			guild:D.Guild_API = D.Guild_API.from_dict(server_req.json())
 			server = self.data.servers[str(server_id)]
@@ -185,12 +233,11 @@ class Me(discord.Client):
 	
 
 	async def fully_process_user(self, user_id):
-		profile_req = requests.get(f"https://discord.com/api/v9/users/{user_id}/profile", headers=self.auth)
+		profile_req = self.get(f"https://discord.com/api/v9/users/{user_id}/profile", headers=self.auth)
 		if profile_req.ok: #usually fails if the user is a bot
 			profile:D.Profile_API = D.Profile_API.from_dict(profile_req.json())
 			#process user servers
 			user = self.data.users[str(user_id)]
-
 			for server in profile.mutual_guilds:
 				if int(server.id) in self.config.ignore_servers: continue
 				if int(server.id) not in user.servers:
@@ -205,10 +252,20 @@ class Me(discord.Client):
 
 			user.last_profile_check = now() #profile check finished.
 			#are they stalking us?
-			await self.check_stalking(user)
+			if self.config.disable_stalker_flagging == False:
+				await self.check_stalking(user)
+			else: print(f"Did not check {user_id} to see if they're stalking you")
+			print("user processed")
+		else:
+			#usually, a code 50001/missing access, will mean that the user is no longer in any mutual servers
+			print(user_id, profile_req.content)
+			if "Access denied" in profile_req.content.decode(): #ratelimiting by cloudflare
+				await asyncio.sleep(120)
+		return profile_req
 
 	async def check_stalking(self, user:D.User):
-		if len(user.servers) >= self.config.servers_alert_level and (user.bot == False or self.config.bots_can_stalk):
+		filtered_servers = self.cluster_finder.filter_server_list(user.servers)
+		if len(filtered_servers) >= self.config.servers_alert_level and (user.bot == False or self.config.bots_can_stalk):
 			if str(user.user_id) not in self.data.stalkers:
 				user.servers.sort()
 				self.data.stalkers[str(user.user_id)] = D.Stalker(user_id=user.user_id, server_hash=str(user.servers))
