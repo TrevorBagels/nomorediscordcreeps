@@ -1,5 +1,5 @@
 
-#nomorediscordcreeps
+# nomorediscordcreeps
 Say goodbye to stalkers you don't know about! 
 
 This program will regularly check users for mutual servers, and report any odd behavior back to you. It's ideal for finding people that are stalking you on Discord. Also, in a way, while helping find the creeps, it also turns you into a creep, depending on how you use it.
