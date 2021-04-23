@@ -47,12 +47,25 @@ class Me(discord.Client):
 		with open("data.json", "r") as f:
 			self.data:D.SaveData = D.SaveData.from_dict(json.loads(f.read(), object_hook=json_util.object_hook))
 
+	def get_friends(self): #!makes a single api call
+		relationships_req = requests.get(f"https://discord.com/api/v9/users/@me/relationships", headers={"authorization": self.token})
+		friends = []
+		if relationships_req.ok:
+			for x in relationships_req.json():
+				friends.append(int(x['id']))
+		else:
+			print("Couldn't find friends")
+		return friends
 
 
 	async def on_ready(self):
 		print(self.user.display_name + " connected to Discord!")
 		if self.user.id not in self.config.ignore_users:
 			self.config.ignore_users.append(self.user.id)
+		if self.config.friends_can_stalk == False:
+			for x in self.get_friends():
+				if x not in self.config.ignore_users:
+					self.config.ignore_users.append(x)
 	
 	async def begin(self):
 		await self.start(self.token, bot=False)
@@ -67,9 +80,9 @@ class Me(discord.Client):
 		if message.guild != None:
 			server = message.guild.id
 		
-		self.process_user(message.author.id, server=server, name=message.author.name, bot=message.author.bot)
+		self.process_user(message.author.id, server=server, joined=message.author.joined_at, name=message.author.name, bot=message.author.bot)
 		for x in message.mentions:
-			self.process_user(x.id, server=server, name=x.name, bot=x.bot)
+			self.process_user(x.id, server=server, joined=x.joined_at, name=x.name, bot=x.bot)
 	
 	async def main_loop(self):
 		while True:
@@ -99,7 +112,7 @@ class Me(discord.Client):
 			server.server_name = guild.name
 
 
-	def process_user(self, user_id, server=None, name=None, bot=False):
+	def process_user(self, user_id, server=None, joined=None, name=None, bot=False):
 		if int(user_id) in self.config.ignore_users: return
 		if str(user_id) not in self.data.users:
 			self.data.users[str(user_id)] = D.User(user_id=user_id, servers=[], last_profile_check=long_ago(), bot=bot)
@@ -110,6 +123,8 @@ class Me(discord.Client):
 		if server is not None and int(server) not in self.data.users[str(user_id)].servers: #add server if provided
 			self.process_server(server)
 			self.data.users[str(user_id)].servers.append(int(server))
+			if joined != None:
+				self.data.servers[str(server)].members[str(user_id)].user_joined = joined
 	
 
 	async def fully_process_user(self, user_id):
