@@ -7,7 +7,9 @@ First, do some configuration. You'll need your discord token (`token`), Pushover
 Next, install the requirements.
 `pip3 install -r requirements.txt`
 
-Now, you're ready to run the program. 
-`cd dev`
-`python3 -m program`
+Now, you're ready to run the program.
+```
+cd dev
+python3 -m program
+```
 
