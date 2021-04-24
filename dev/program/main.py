@@ -1,7 +1,7 @@
 from collections import UserDict
 from datetime import datetime
 from discord.ext import tasks
-import discord, prodict, asyncio, json, requests, sys
+import discord, prodict, asyncio, json, requests, sys, time
 from bson import json_util
 from . import data as D
 from .utils import now, long_ago
@@ -22,6 +22,7 @@ class Config(prodict.Prodict):
 	bots_can_stalk:			bool #ignore bots
 	friends_can_stalk:		bool #ignore friends
 	scrape_amount:			int #amount of messages to scrape for the initial scrape, divided by 50.
+	scrape_guild_count:		int #max amount of guilds to scrape on the initial scrape. default = 100
 	false_positive_level:	int #how many people need to be found in clusters of servers for that cluster of servers to be considered a related server cluster?
 	block_scanning:			bool #whether to stop scanning user profiles. used when getting ratelimited
 	disable_stalker_flagging:	bool #set this to true if you don't want to check for stalkers. this is automatically true while doing an initial scan
@@ -36,6 +37,7 @@ class Config(prodict.Prodict):
 		self.friends_can_stalk = False
 		self.scrape_amount = 1
 		self.block_scanning = False
+		self.scrape_guild_count = 100
 		self.disable_stalker_flagging = False
 
 
@@ -48,11 +50,11 @@ class Me(discord.Client):
 		self.load()
 		self.cluster_finder = smartstuff.RelatedServerFinder(self)
 		self.notifier = Notifier(self)
-		self.cloudscraper = cloudscraper.create_scraper()
+		#self.cloudscraper = cloudscraper.create_scraper()
 		self.faker = faker.Faker()
 		self.auth = {"authorization": self.token, "user-agent": self.faker.user_agent()}
 		self.has_connected = False
-
+		self.req_log_last_cleared = time.time()
 		self.req_log = []
 		discord.Client.__init__(self, self_bot=True)
 	
@@ -94,9 +96,11 @@ class Me(discord.Client):
 			for x in self.get_friends():
 				if x not in self.config.ignore_users:
 					self.config.ignore_users.append(x)
+		
 		if self.data.first_time:
 			self.data.first_time = False
 			await self.initial_scrape()
+		
 		self.cluster_finder.find_patterns() #identify related servers to avoid false positives		
 		self.config.disable_stalker_flagging = self.disable_stalker_flagging_original #set stalker detection to the original value
 		self.has_connected = True
@@ -147,12 +151,23 @@ class Me(discord.Client):
 						self.data.user_processing_queue.remove(self.data.user_processing_queue[0])
 						if req.ok == False and req.json()['code'] != 50001:
 							await asyncio.sleep(3 + random.random() * 5) #sleep, we probably made a bad request. too many of these is bad. hopefully we aren't being ratelimited
-						await asyncio.sleep(.78 + random.random() * 2.5)
+						
+						await asyncio.sleep(1.5 + random.random() * 2.5)
 			
 			if (now() - self.last_save).total_seconds() > self.config.save_frequency:
 				self.save()
 				self.last_save = now()
-			await asyncio.sleep(.5 + random.random() * 3)
+			
+			await asyncio.sleep(1.5 + random.random() * 3)
+
+			if len(self.req_log) > 30 * (time.time() - self.req_log_last_cleared)/60 + random.randrange(-10, 10) or time.time() - self.req_log_last_cleared > 180: #take a break if we get near 30 requests in under a minute
+				print("taking a break!")
+				self.save()
+				await asyncio.sleep(random.randrange(25, 70))
+				self.req_log = [] #clear request log
+				self.req_log_last_cleared = time.time()
+				await asyncio.sleep(3)
+
 
 
 	async def initial_scrape(self): #! MAKES LOTS OF API CALLS. I MEAN   L O T S   O F   T H E M

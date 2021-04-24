@@ -1,3 +1,4 @@
 notifiers
 discord
 cloudscraper
+faker
