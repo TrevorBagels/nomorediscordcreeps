@@ -1,0 +1,100 @@
+:root{
+	--textcolor: white;
+	--background: #000;
+	--background1: #111;
+	--background2: #212;
+	--button: #280055;
+}
+
+html {
+	color: var(--textcolor);
+	background-color: var(--background);
+	font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+button, button:focus, input{
+	border: none;
+	outline: none;
+	background-color: var(--button);
+	color: var(--textcolor);
+	padding: 5px 8px 5px 8px;
+}
+div {
+	padding: 20px 20px 20px 20px;
+	margin: 10px 10px 10px 10px;
+}
+#top {
+	height: 100vh;
+	width: 100%;
+	display: grid;
+	grid-template-columns: 60% 35%;
+	overflow: hidden;
+}
+#dashboard {
+	background-color: var(--background1);
+	font-size: medium;
+	padding: 10px 10px 10px 10px;
+	margin: 3px 3px 3px 3px;
+}
+.scrollbox {
+	height: 80%;
+	overflow-y: auto;
+}
+#stalkers {
+	background-color: var(--background1);
+	padding: 20px 20px 20px 20px;
+	padding: 10px 10px 10px 10px;
+	margin: 3px 3px 3px 3px;
+	height: 70%;
+}
+#stalkers h2, #servers h2{
+	text-align: center;
+}
+#servers {
+	background-color: var(--background1);
+	width: 95%;
+	padding: 20px 20px 20px 20px;
+}
+#servers > div {
+	overflow-y: auto;
+	height: 95%;
+	display: grid;
+	grid-template-columns: 50% 50%;
+	column-gap: 3px;
+	width: 100%;
+}
+
+.server{
+	background-color: var(--background2);
+	display: block;
+	max-width: 75%;
+	border-radius: 3px;
+	padding: 5px 5px 5px 5px;
+}
+#pq{
+	overflow-x: scroll;
+	max-width: 500px;
+	display: inline-block;
+	white-space: nowrap;
+}
+.stalker{
+	background-color: var(--background2);
+	border-radius: 3px;
+	margin-left: 25px;
+	margin-top: 15px;
+	padding: 15px 35px 15px 35px;
+}
+
+table{
+	margin: 6px 3px 3px 3px;
+	width: 100%;
+	border: 1px solid rgb(53, 50, 90);
+	border-collapse: collapse;
+}
+
+tr:nth-child(even) {background-color:rgba(177, 149, 180, 0.1);}
+
+
+pre {
+	margin-left: 50px;
+}
+

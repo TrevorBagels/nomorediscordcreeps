@@ -1,5 +1,9 @@
 import asyncio, os, sys
 from .main import Me
+from flask import Flask
+import threading
+
+
 
 if os.path.exists("config.json") == False:
 	print("No config file found!")
@@ -11,6 +15,23 @@ if os.path.exists("data.json") == False:
 
 loop = asyncio.get_event_loop()
 me = Me()
+app = Flask(__name__, static_folder="./program/static")
+
+from .flaskapp import appdisplay as appdisp
+from flask import request
+@app.route("/ignore_user", methods=["POST"])
+def ignore_user():
+	print("IGNORE USER REQUEST RECEIVED")
+	user_id = request.form["user_id"]
+	me.ignore_user(user_id)
+	del me.data.stalkers[str(user_id)]
+	return appdisplay()
+@app.route("/", methods=['GET', 'POST'])
+def appdisplay():
+	return appdisp(me)
+	
+
+threading.Thread(target=app.run).start()
 
 loop.create_task(me.begin())
 loop.create_task(me.main_loop())

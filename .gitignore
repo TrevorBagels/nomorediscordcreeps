@@ -2,3 +2,6 @@
 /dev/data.json
 /dev/olddata.json
 /dev/requestslog.json
+/dev/databackup.json
+/dev/test.js
+/dev/testing.py

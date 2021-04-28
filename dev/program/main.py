@@ -7,7 +7,7 @@ from . import data as D
 from .utils import now, long_ago
 from .notify import Notifier
 from . import smartstuff
-import cloudscraper, faker, random
+import faker, random
 
 
 class Config(prodict.Prodict):
@@ -43,11 +43,13 @@ class Config(prodict.Prodict):
 
 class Me(discord.Client):
 	def __init__(self):
+		from .managedata import ManageData
 		with open("config.json", "r") as f:
 			self.config = Config.from_dict(json.loads(f.read()))
 		self.last_save = now()
 		self.token = self.config.token
 		self.load()
+		self.measure_message_rates()
 		self.cluster_finder = smartstuff.RelatedServerFinder(self)
 		self.notifier = Notifier(self)
 		#self.cloudscraper = cloudscraper.create_scraper()
@@ -56,21 +58,39 @@ class Me(discord.Client):
 		self.has_connected = False
 		self.req_log_last_cleared = time.time()
 		self.req_log = []
+		self.ignore_users = self.config.ignore_users.copy()
+		self.last_rate_measurement = time.time()
+		self.message_rate_watcher.start()
 		discord.Client.__init__(self, self_bot=True)
 	
+	def ignore_user(self, user_id):
+		self.config.ignore_users.append(user_id)
+		self.ignore_users.append(user_id)
+
 	def get(self, url, headers={}):
 		req = requests.get(url, headers=headers)
 		#req = self.cloudscraper.get(url, headers=headers)
 		self.req_log.append([url, req.content.decode(), str(req.headers), str(req.cookies)])
 		return req
 
+	def measure_message_rates(self):
+		print("Measure rates")
+		for _, server in self.data.servers.items():
+			server.rate_history.take_measurement()
+		self.last_rate_measurement = time.time()
 
+
+			
 
 	def save(self):
+		print("Saving... Do not stop the program while this operation takes place.")
 		with open("data.json", "w") as f:
 			f.write(json.dumps(self.data.to_dict(is_recursive=True), default=json_util.default, indent=4))
+		with open("config.json", "w+") as f:
+			f.write(json.dumps(self.config.to_dict(is_recursive=True), default=json_util.default, indent=4))
 		with open("requestslog.json", "w+") as f:
 			f.write(json.dumps(self.req_log, default=json_util.default, indent=4))
+		print("Saved!")
 	
 	def load(self):
 		with open("data.json", "r") as f:
@@ -89,13 +109,13 @@ class Me(discord.Client):
 
 	async def on_ready(self):
 		print(self.user.display_name + " connected to Discord!")
-		if self.user.id not in self.config.ignore_users:
-			self.config.ignore_users.append(self.user.id)
+		if self.user.id not in self.ignore_users:
+			self.ignore_users.append(self.user.id)
 		
 		if self.config.friends_can_stalk == False:
 			for x in self.get_friends():
-				if x not in self.config.ignore_users:
-					self.config.ignore_users.append(x)
+				if x not in self.ignore_users:
+					self.ignore_users.append(x)
 		
 		if self.data.first_time:
 			self.data.first_time = False
@@ -120,13 +140,20 @@ class Me(discord.Client):
 		server = None
 		if message.guild != None:
 			server = message.guild.id
+		if server != None:
+			self.data.servers[str(server)].rate_history.current_count += 1
 		joined_at = None
 		if hasattr(message.author, "joined_at"): joined_at = message.author.joined_at
-		self.process_user(message.author.id, server=server, joined=joined_at, name=message.author.name, bot=message.author.bot)
+		self.process_user(message.author.id, server=server, joined=joined_at, name=message.author.name, disc=message.author.discriminator, bot=message.author.bot)
 		for x in message.mentions:
 			joined_at = None
 			if hasattr(x, "joined_at"): joined_at = x.joined_at
-			self.process_user(x.id, server=server, joined=joined_at, name=x.name, bot=x.bot)
+			self.process_user(x.id, server=server, joined=joined_at, name=x.name, disc=x.discriminator, bot=x.bot)
+	
+	@tasks.loop(seconds=10)
+	async def message_rate_watcher(self):
+		if time.time() - self.last_rate_measurement >= 29.99:
+			self.measure_message_rates()
 	
 	async def main_loop(self):
 		while True:
@@ -151,7 +178,6 @@ class Me(discord.Client):
 						self.data.user_processing_queue.remove(self.data.user_processing_queue[0])
 						if req.ok == False and req.json()['code'] != 50001:
 							await asyncio.sleep(3 + random.random() * 5) #sleep, we probably made a bad request. too many of these is bad. hopefully we aren't being ratelimited
-						
 						await asyncio.sleep(1.5 + random.random() * 2.5)
 			
 			if (now() - self.last_save).total_seconds() > self.config.save_frequency:
@@ -199,7 +225,7 @@ class Me(discord.Client):
 							break
 						if 'bot' not in x['author']:
 							x['author']['bot'] = False
-						self.process_user(int(x['author']['id']), server=int(guild.id), name=x['author']['username'], bot=x['author']['bot'])
+						self.process_user(int(x['author']['id']), server=int(guild.id), name=x['author']['username'], disc=x['author']['discriminator'], bot=x['author']['bot'])
 						last_message = x['id']
 					if len(msgs) < 50:
 						break
@@ -231,11 +257,14 @@ class Me(discord.Client):
 			server.server_name = guild.name
 
 
-	def process_user(self, user_id, server=None, joined=None, name=None, bot=False):
-		if int(user_id) in self.config.ignore_users: return
+	def process_user(self, user_id, server=None, joined=None, name=None, disc=None, bot=False):
+		if int(user_id) in self.ignore_users: return
 		if str(user_id) not in self.data.users:
+			self.data.user_discovery.append((now(), int(user_id)))
 			self.data.users[str(user_id)] = D.User(user_id=user_id, servers=[], last_profile_check=long_ago(), bot=bot)
-			if name is not None: self.data.users[str(user_id)].username = name
+			if name is not None: 
+				self.data.users[str(user_id)].username = name
+				self.data.users[str(user_id)].discriminator = disc
 		
 		if (now() - self.data.users[str(user_id)].last_profile_check).total_seconds() / 60 >= self.config.check_frequency and user_id not in self.data.user_processing_queue:
 			self.data.user_processing_queue.append(user_id)
@@ -299,11 +328,3 @@ class Me(discord.Client):
 			elif self.data.stalkers[str(user.user_id)].server_hash != str(user.servers):
 				self.data.stalkers[str(user.user_id)].server_hash = str(user.servers)
 				self.notifier.alert(f"{user.username} MAY STILL BE STALKING YOU!\nThere was a change in mutual servers that they're in. They are now in {len(user.servers)} mutual servers")
-				
-	
-	
-
-
-
-
-
