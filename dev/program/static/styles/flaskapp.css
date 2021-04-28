@@ -11,12 +11,18 @@ html {
 	background-color: var(--background);
 	font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
-button, button:focus, input{
+button, button:focus{
+	cursor: pointer;
 	border: none;
 	outline: none;
 	background-color: var(--button);
 	color: var(--textcolor);
 	padding: 5px 8px 5px 8px;
+	transition: .5s;
+}
+button:hover{
+	transition: .5s;
+	background-color: rgb(2, 75, 143);
 }
 div {
 	padding: 20px 20px 20px 20px;
@@ -35,9 +41,13 @@ div {
 	padding: 10px 10px 10px 10px;
 	margin: 3px 3px 3px 3px;
 }
-.scrollbox {
-	height: 80%;
+.scrollbox{
 	overflow-y: auto;
+}
+#stalkers .scrollbox {
+	overflow-y: auto;
+	height: 700px;
+
 }
 #stalkers {
 	background-color: var(--background1);

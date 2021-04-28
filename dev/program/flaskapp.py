@@ -26,7 +26,7 @@ def appdisplay(me:Me):
 	
 	body += "<div id='top'>"
 	body += main
-	body += f"<div id='stalkers'><h2>Stalkers ({len(me.data.stalkers)})</h2><div class='scrollbox'>" + display_stalkers(me) + "</div></div>"
+	body += f"<div id='stalkers'><h2>Stalkers (<span id='stalkercount'>{len(me.data.stalkers)}</span>)</h2><div class='scrollbox'>" + display_stalkers(me) + "</div></div>"
 	body += "</div>"
 	
 	body += f"<div id='servers'><h2>Servers ({len(me.data.servers)})</h2><div>" + display_servers(me) + "</div></div>"
@@ -116,7 +116,7 @@ def display_stalkers(me) -> str:
 		u = me.data.users[str(x.user_id)]
 		txt2 = f"<b>{getname(u)}</b><br><code>{u.user_id}</code><br>"
 		
-		button = f"""<button onclick="$.post('/ignore_user', {{user_id: '{x.user_id}' }})">Ignore</button>"""
+		button = f"""<button onclick="$.post('/ignore_user', {{user_id: '{u.user_id}' }}); document.getElementById('stalker{u.user_id}').remove(); document.getElementById('stalkercount').innerHTML -= 1;">Ignore</button>"""
 		txt2 += button
 		servers = "<table><tr><th>Server</th><th>Server ID</th></tr>"
 		for x in u.servers:
@@ -124,7 +124,8 @@ def display_stalkers(me) -> str:
 			servers += f"<tr><td>{pt(s.server_name)}</td><td>[{s.server_id}]</td></tr>"
 		servers += "</table>"
 		txt2 += "<h3>Servers</h3>" + servers
-		stalkers += "\n" + f"<div class='stalker'>{txt2}</div>"
+		stalkers += "\n" + f"<div id='stalker{u.user_id}'class='stalker'>{txt2}</div>"
+	stalkers += "<div style='min-height: 350px;'><br></div>"
 	return stalkers
 
 

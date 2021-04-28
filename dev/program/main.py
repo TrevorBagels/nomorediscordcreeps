@@ -258,7 +258,7 @@ class Me(discord.Client):
 
 
 	def process_user(self, user_id, server=None, joined=None, name=None, disc=None, bot=False):
-		if int(user_id) in self.ignore_users: return
+		#if int(user_id) in self.ignore_users: return
 		if str(user_id) not in self.data.users:
 			self.data.user_discovery.append((now(), int(user_id)))
 			self.data.users[str(user_id)] = D.User(user_id=user_id, servers=[], last_profile_check=long_ago(), bot=bot)
@@ -266,7 +266,7 @@ class Me(discord.Client):
 				self.data.users[str(user_id)].username = name
 				self.data.users[str(user_id)].discriminator = disc
 		
-		if (now() - self.data.users[str(user_id)].last_profile_check).total_seconds() / 60 >= self.config.check_frequency and user_id not in self.data.user_processing_queue:
+		if int(user_id) not in self.ignore_users and (now() - self.data.users[str(user_id)].last_profile_check).total_seconds() / 60 >= self.config.check_frequency and user_id not in self.data.user_processing_queue:
 			self.data.user_processing_queue.append(user_id)
 		if server is not None and int(server) not in self.data.users[str(user_id)].servers: #add server if provided
 			self.process_server(server)
