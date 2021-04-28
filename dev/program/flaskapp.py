@@ -31,7 +31,7 @@ def appdisplay(me:Me):
 	
 	body += f"<div id='servers'><h2>Servers ({len(me.data.servers)})</h2><div>" + display_servers(me) + "</div></div>"
 	jqueryscript = """<script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>"""
-	return jqueryscript + "<script src='https://cdn.jsdelivr.net/npm/chart.js'></script>" + style + "<body>" + body + "</body>"
+	return jqueryscript + "<title>ass</title><script src='https://cdn.jsdelivr.net/npm/chart.js'></script>" + style + "<body>" + body + "</body>"
 
 
 def pt(txt): #process text, removing any < / >

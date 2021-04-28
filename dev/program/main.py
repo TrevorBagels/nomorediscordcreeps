@@ -26,7 +26,7 @@ class Config(prodict.Prodict):
 	false_positive_level:	int #how many people need to be found in clusters of servers for that cluster of servers to be considered a related server cluster?
 	block_scanning:			bool #whether to stop scanning user profiles. used when getting ratelimited
 	disable_stalker_flagging:	bool #set this to true if you don't want to check for stalkers. this is automatically true while doing an initial scan
-
+	disable_profile_api_calls:	bool #set this to true if you don't want to run fully_process_user. this also disabled stalker flagging.
 	def init(self):
 		self.ignore_servers = []
 		self.ignore_users = []
@@ -39,6 +39,7 @@ class Config(prodict.Prodict):
 		self.block_scanning = False
 		self.scrape_guild_count = 100
 		self.disable_stalker_flagging = False
+		self.disable_profile_api_calls = False
 
 
 class Me(discord.Client):
@@ -277,6 +278,7 @@ class Me(discord.Client):
 	
 
 	async def fully_process_user(self, user_id):
+		if self.config.disable_profile_api_calls: return
 		profile_req = self.get(f"https://discord.com/api/v9/users/{user_id}/profile", headers=self.auth)
 		if profile_req.ok: #usually fails if the user is a bot
 			profile:D.Profile_API = D.Profile_API.from_dict(profile_req.json())
