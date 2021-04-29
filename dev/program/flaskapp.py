@@ -1,4 +1,7 @@
 import html, time
+
+from discord import channel
+from discord.enums import ChannelType
 from . import data as D
 from .main import Me
 from . import utils
@@ -44,6 +47,55 @@ def getname(user):
 		name += f"<b>#{user.discriminator}</b>"
 	return name
 
+def get_server_messages(me:Me, server:D.Server) -> str:
+	channels_messages = {}
+	for x in server.recent_messages:
+		if x[2] not in channels_messages:
+			channels_messages[x[2]] = []
+		channels_messages[x[2]].append(D.Prodict.from_dict({
+			"timestamp": x[0].astimezone(datetime.timezone.utc),
+			"time": utc2local(x[0].astimezone(datetime.timezone.utc)).strftime("%H:%M"),
+			"author": getname(me.data.users[str(x[1])]),
+			"message": pt(x[3])
+		}))
+	top3 = [] #top 3 channels, these are the ones containing the most recent messages
+	for x in channels_messages:
+		top3.append(x)
+	def sortthing(value):
+		return channels_messages[value][len(channels_messages[value])-1].timestamp
+	
+	top3.sort(key=sortthing, reverse=True)
+	top3 = top3[:3]
+	txt = ""
+	for c in top3:
+		messages = channels_messages[c][-20:]
+		channel_text = f"<div class='channel'><span class='channelname'>#{server.channels[str(c)].channel_name}</span>"
+		prev_author = None
+		for i, m in enumerate(messages):
+			if prev_author != m.author:
+				if prev_author != None:
+					channel_text += "</table></div>" #end the previous author messages div, and the previous author div.
+				#new author, start an author div
+				channel_text += f"<div class='newauthor'>"
+				channel_text += f"<span class='authorname'>{m.author}</span>"
+				channel_text += "<table class='newauthormessages'>"
+			
+			channel_text += f"""<tr><td class='messagetime'>{m.time}</td><td class='messagecontent'>{m.message}</td></tr>"""
+			
+			#add <br> if there will be more messages after this
+			if len(messages)-1 > i:
+				channel_text += "<br>"
+			
+			prev_author = m.author
+		
+		channel_text += "</table></div></div>"		
+		txt += channel_text + "\n"
+	
+	return txt
+		
+	
+
+
 def display_servers(me:Me) -> str:
 	servers = ""
 	sorted_servers = []
@@ -56,10 +108,11 @@ def display_servers(me:Me) -> str:
 	for server in sorted_servers:
 		s = "<div class='server'>"
 		s += f"""
-		<div><h3 style='float: left;'>{pt(str(server.server_name))}</h3>
+		<div class='serverinfo'><h3 style='float: left;'>{pt(str(server.server_name))}</h3>
 		<p style='float: right;'>Members documented: {len(server.members)}<br>
 		ID: <code>{server.server_id}</code><br>
 		</p></div>
+		<div class='servermessages'>{get_server_messages(me, server)}</div>
 		{chart(server.rate_history.five_minute_cache[-70:], server.server_id, extra_data=server.member_history.five_minute_cache[-70:])}
 		"""
 		s += "</div>"
@@ -88,7 +141,6 @@ def chart(data:list[tuple[datetime.datetime, int]], id, extra_data:list[tuple[da
 	
 	for a in extra_data:
 		datestring = utc2local(a[0]).strftime("%H:%M")
-		print(datestring)
 		if datestring in labels:
 			index = labels.index(datestring)
 			data3[index] = a[1]

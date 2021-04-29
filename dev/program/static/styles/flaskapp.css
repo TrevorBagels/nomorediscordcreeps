@@ -4,6 +4,7 @@
 	--background1: #111;
 	--background2: #212;
 	--button: #280055;
+	--messages: #1f0a38;
 }
 
 html {
@@ -107,3 +108,62 @@ pre {
 	margin-left: 50px;
 }
 
+
+
+.authorname{
+	font-weight: 600;
+	margin-left: 10px;
+
+}
+.servermessages{
+	padding: 0px 0px 0px 0px;
+	margin: 35px 0px 0px 0px;
+	background-color: var(--messages);
+	display: block;
+}
+
+.channel{
+	padding: 1px 7px 4px 7px;
+	font-size: .8em;
+	max-height: 220px;
+	width: 90%;
+	border: 2px solid cyan;
+	overflow: auto;
+}
+
+.newauthor{
+	padding: 0px 0px 0px 0px;
+	margin: 5px 0px 0px 0px;
+}
+table.newauthormessages{
+	border: none;
+	table-layout: fixed;
+	padding: 0px 0px 0px 0px;
+	margin: 0px 0px 0px 15px;
+}
+.newauthormessages tr td:first-child {
+	width: 75px;
+}
+
+.newauthormessages tr{
+	background-color: var(--messages);
+}
+
+
+.messagetime{
+	font-weight: 200;
+	font-size: 0.8em;
+	margin-left: 20px;
+}
+.messagecontent{
+	margin-left: 25px;
+}
+.channelname{
+	top: 0;
+	margin-top: 0;
+	background: var(--messages);
+	padding-right: 20px;
+	position: sticky;
+	font-size: 1.4em;
+	font-weight: 800;
+}
