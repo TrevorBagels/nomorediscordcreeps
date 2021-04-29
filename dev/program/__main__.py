@@ -1,5 +1,4 @@
 import asyncio, os, sys, time, json
-from dev.program import flaskapp
 from . import utils
 from .main import Me
 import threading
