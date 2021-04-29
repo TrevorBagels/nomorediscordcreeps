@@ -1,172 +1,134 @@
-:root{
-	--textcolor: white;
-	--background: #000;
-	--background1: #111;
-	--background2: #212;
-	--button: #280055;
-	--messages: #1f0a38;
-}
 a, a:focus, a:visited {
-	color: rgb(149, 255, 190);
-	text-decoration: none;
-}
+  color: #95ffbe;
+  text-decoration: none; }
+
 html {
-	color: var(--textcolor);
-	background-color: var(--background);
-	font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
-button, button:focus{
-	cursor: pointer;
-	border: none;
-	outline: none;
-	background-color: var(--button);
-	color: var(--textcolor);
-	padding: 5px 8px 5px 8px;
-	transition: .5s;
-}
-button:hover{
-	transition: .5s;
-	background-color: rgb(2, 75, 143);
-}
+  color: #fff;
+  background-color: #000;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; }
+
+button, button:focus {
+  cursor: pointer;
+  border: none;
+  outline: none;
+  background-color: #280055;
+  color: #fff;
+  padding: 5px 8px 5px 8px;
+  transition: 0.5s; }
+
+button:hover {
+  transition: 0.5s;
+  background-color: #024b8f; }
+
 div {
-	padding: 20px 20px 20px 20px;
-	margin: 10px 10px 10px 10px;
-}
+  padding: 20px 20px 20px 20px;
+  margin: 10px 10px 10px 10px; }
+
 #top {
-	height: 100vh;
-	width: 100%;
-	display: grid;
-	grid-template-columns: 60% 35%;
-	overflow: hidden;
-}
+  height: 100vh;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 60% 35%;
+  overflow: hidden; }
+
 #dashboard {
-	background-color: var(--background1);
-	font-size: medium;
-	padding: 10px 10px 10px 10px;
-	margin: 3px 3px 3px 3px;
-}
-.scrollbox{
-	overflow-y: auto;
-}
-#stalkers .scrollbox {
-	overflow-y: auto;
-	height: 700px;
+  background-color: #111;
+  font-size: medium;
+  padding: 10px 10px 10px 10px;
+  margin: 3px 3px 3px 3px; }
+  #dashboard tbody {
+    overflow: auto;
+    height: 100%; }
 
-}
 #stalkers {
-	background-color: var(--background1);
-	padding: 20px 20px 20px 20px;
-	padding: 10px 10px 10px 10px;
-	margin: 3px 3px 3px 3px;
-}
-#stalkers h2, #servers h2{
-	text-align: center;
-}
+  background-color: #111;
+  padding: 20px 20px 20px 20px;
+  padding: 10px 10px 10px 10px;
+  margin: 3px 3px 3px 3px; }
+  #stalkers .scrollbox {
+    overflow-y: auto;
+    height: 700px; }
+    #stalkers .scrollbox .stalker {
+      background-color: #212;
+      border-radius: 3px;
+      margin-left: 25px;
+      margin-top: 15px;
+      padding: 15px 35px 15px 35px; }
+
+#stalkers h2, #servers h2 {
+  text-align: center; }
+
 #servers {
-	background-color: var(--background1);
-	width: 95%;
-	padding: 20px 20px 20px 20px;
-}
-#servers > div {
-	overflow-y: auto;
-	height: 95%;
-	display: grid;
-	grid-template-columns: 50% 50%;
-	column-gap: 3px;
-	width: 100%;
-}
+  background-color: #111;
+  width: 95%;
+  padding: 20px 20px 20px 20px; }
+  #servers > div {
+    overflow-y: auto;
+    height: 95%;
+    display: grid;
+    grid-template-columns: 50% 50%;
+    column-gap: 3px;
+    width: 100%; }
+  #servers .server {
+    background-color: #212;
+    display: block;
+    max-width: 75%;
+    border-radius: 3px;
+    padding: 5px 5px 5px 5px; }
 
-.server{
-	background-color: var(--background2);
-	display: block;
-	max-width: 75%;
-	border-radius: 3px;
-	padding: 5px 5px 5px 5px;
-}
-#pq{
-	overflow-x: scroll;
-	max-width: 500px;
-	display: inline-block;
-	white-space: nowrap;
-}
-.stalker{
-	background-color: var(--background2);
-	border-radius: 3px;
-	margin-left: 25px;
-	margin-top: 15px;
-	padding: 15px 35px 15px 35px;
-}
+#pq {
+  overflow-x: scroll;
+  max-width: 500px;
+  display: inline-block;
+  white-space: nowrap; }
 
-table{
-	margin: 6px 3px 3px 3px;
-	width: 100%;
-	border: 1px solid rgb(53, 50, 90);
-	border-collapse: collapse;
-}
+table {
+  margin: 6px 3px 3px 3px;
+  width: 100%;
+  border: 1px solid #35325a;
+  border-collapse: collapse; }
 
-tr:nth-child(even) {background-color:rgba(177, 149, 180, 0.1);}
+tr:nth-child(even) {
+  background-color: rgba(177, 149, 180, 0.1); }
 
-
-pre {
-	margin-left: 50px;
-}
-
-
-
-.authorname{
-	font-weight: 600;
-	margin-left: 10px;
-
-}
-.servermessages{
-	padding: 0px 0px 0px 0px;
-	margin: 35px 0px 0px 0px;
-	background-color: var(--messages);
-	display: block;
-}
-
-.channel{
-	padding: 1px 7px 4px 7px;
-	font-size: .8em;
-	max-height: 220px;
-	width: 90%;
-	border: 2px solid cyan;
-	overflow: auto;
-}
-
-.newauthor{
-	padding: 0px 0px 0px 0px;
-	margin: 5px 0px 0px 0px;
-}
-table.newauthormessages{
-	border: none;
-	table-layout: fixed;
-	padding: 0px 0px 0px 0px;
-	margin: 0px 0px 0px 15px;
-}
-.newauthormessages tr td:first-child {
-	width: 75px;
-}
-
-.newauthormessages tr{
-	background-color: var(--messages);
-}
-
-
-.messagetime{
-	font-weight: 200;
-	font-size: 0.8em;
-	margin-left: 20px;
-}
-.messagecontent{
-	margin-left: 25px;
-}
-.channelname{
-	top: 0;
-	margin-top: 0;
-	background: var(--messages);
-	padding-right: 20px;
-	position: sticky;
-	font-size: 1.4em;
-	font-weight: 800;
-}
+.servermessages {
+  padding: 0px 0px 0px 0px;
+  margin: 35px 0px 0px 0px;
+  background-color: #1f0a38;
+  display: block; }
+  .servermessages .channel {
+    padding: 1px 7px 4px 7px;
+    font-size: 0.8em;
+    max-height: 220px;
+    width: 90%;
+    border: 2px solid cyan;
+    overflow: auto; }
+    .servermessages .channel .channelname {
+      top: 0;
+      margin-top: 0;
+      background: #1f0a38;
+      padding-right: 20px;
+      position: sticky;
+      font-size: 1.4em;
+      font-weight: 800; }
+    .servermessages .channel .newauthor {
+      padding: 0px 0px 0px 0px;
+      margin: 5px 0px 0px 0px; }
+      .servermessages .channel .newauthor .authorname {
+        font-weight: 600;
+        margin-left: 10px; }
+      .servermessages .channel .newauthor table.newauthormessages {
+        border: none;
+        table-layout: fixed;
+        padding: 0px 0px 0px 0px;
+        margin: 0px 0px 0px 15px; }
+        .servermessages .channel .newauthor table.newauthormessages tr {
+          background-color: #1f0a38; }
+          .servermessages .channel .newauthor table.newauthormessages tr td:first-child {
+            width: 75px; }
+          .servermessages .channel .newauthor table.newauthormessages tr .messagetime {
+            font-weight: 200;
+            font-size: 0.8em;
+            margin-left: 20px; }
+          .servermessages .channel .newauthor table.newauthormessages tr .messagecontent {
+            margin-left: 25px; }

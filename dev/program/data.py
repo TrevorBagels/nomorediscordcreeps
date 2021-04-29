@@ -182,9 +182,25 @@ class Stalker(Prodict):
 	def init(self):
 		self.time_found = now()
 
+class Message(Prodict):
+	time_sent:		datetime #(UTC)
+	author_id:		int
+	server_id:		int
+	channel_id:		int
+	message_id:		int
+	content:		str
+	reply_to:		int #None if it isn't a reply
+	mentions:		list[int] #people that this message mentions (as IDs)
+
+
+
+
 class Stalkee(Prodict): #someone that you just so happen to be counter-stalking. or maybe you're stalking them even though they aren't stalking you.
-	activities:		dict[str, LongHistory] #to keep track of what they do. with fine details, yaknow?
-	pass
+	user_id:		int
+	activities:		dict[str, LongHistory] #to keep track of what they do. with fine details, yaknow? key=activity name, value=history (where the y value is time spent doing activity)
+	aliases:		list[tuple[datetime, str]] #history of their aliases
+	messages:		list[Message]
+	
 
 class SaveData(Prodict):
 	servers:				dict[str, Server]

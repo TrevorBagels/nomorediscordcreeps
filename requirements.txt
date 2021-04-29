@@ -2,3 +2,5 @@ notifiers
 discord
 faker
 flask
+requests
+pymongo

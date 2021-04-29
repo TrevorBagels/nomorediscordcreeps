@@ -1,0 +1,110 @@
+#top
+	height: 100vh
+	width: 100%
+	display: grid
+	grid-template-columns: 60% 35%
+	overflow: hidden
+#dashboard
+	background-color: $background1
+	font-size: medium
+	padding: 10px 10px 10px 10px
+	margin: 3px 3px 3px 3px
+	tbody
+		overflow: auto
+		height: 100%
+
+#stalkers
+	background-color: $background1
+	padding: 20px 20px 20px 20px
+	padding: 10px 10px 10px 10px
+	margin: 3px 3px 3px 3px
+	.scrollbox
+		overflow-y: auto
+		height: 700px
+		.stalker
+			background-color: $background2
+			border-radius: 3px
+			margin-left: 25px
+			margin-top: 15px
+			padding: 15px 35px 15px 35px
+
+#stalkers h2, #servers h2
+	text-align: center
+
+#servers
+	background-color: $background1
+	width: 95%
+	padding: 20px 20px 20px 20px
+
+	> div
+		overflow-y: auto
+		height: 95%
+		display: grid
+		grid-template-columns: 50% 50%
+		column-gap: 3px
+		width: 100%
+	.server
+		background-color: $background2
+		display: block
+		max-width: 75%
+		border-radius: 3px
+		padding: 5px 5px 5px 5px
+
+#pq
+	overflow-x: scroll
+	max-width: 500px
+	display: inline-block
+	white-space: nowrap
+
+
+table
+	margin: 6px 3px 3px 3px
+	width: 100%
+	border: 1px solid rgb(53, 50, 90)
+	border-collapse: collapse
+
+tr:nth-child(even)
+	background-color: rgba(177, 149, 180, 0.1)
+
+.servermessages
+	padding: 0px 0px 0px 0px
+	margin: 35px 0px 0px 0px
+	background-color: $messages
+	display: block
+	.channel
+		padding: 1px 7px 4px 7px
+		font-size: .8em
+		max-height: 220px
+		width: 90%
+		border: 2px solid cyan
+		overflow: auto
+		.channelname
+			top: 0
+			margin-top: 0
+			background: $messages
+			padding-right: 20px
+			position: sticky
+			font-size: 1.4em
+			font-weight: 800
+		.newauthor
+			padding: 0px 0px 0px 0px
+			margin: 5px 0px 0px 0px
+			.authorname
+				font-weight: 600
+				margin-left: 10px
+			table.newauthormessages
+				border: none
+				table-layout: fixed
+				padding: 0px 0px 0px 0px
+				margin: 0px 0px 0px 15px
+				tr 
+					background-color: $messages
+					td:first-child
+						width: 75px
+					.messagetime
+						font-weight: 200
+						font-size: 0.8em
+						margin-left: 20px
+					.messagecontent
+						margin-left: 25px
+

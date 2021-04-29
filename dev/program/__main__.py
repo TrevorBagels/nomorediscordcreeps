@@ -1,4 +1,5 @@
-import asyncio, os, sys
+import asyncio, os, sys, time
+from . import utils
 from .main import Me
 from flask import Flask
 import threading
@@ -28,10 +29,14 @@ def ignore_user():
 	return appdisplay()
 @app.route("/", methods=['GET', 'POST'])
 def appdisplay():
-	return appdisp(me)
+	print("GET DISPLAY")
+	start = time.time()
+	txt =  appdisp(me)
+	print("Took ", utils.time_elapsed(time.time() - start))
+	return txt
 	
 
-threading.Thread(target=app.run).start()
+threading.Thread(target=app.run, kwargs={"host": '0.0.0.0', "port": 81}).start()
 
 loop.create_task(me.begin())
 loop.create_task(me.main_loop())
