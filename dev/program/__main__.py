@@ -1,4 +1,5 @@
 import asyncio, os, sys, time, json
+from dev.program import flaskapp
 from . import utils
 from .main import Me
 import threading
@@ -41,8 +42,9 @@ if flaskcfg["disabled"] == False:
 		txt =  appdisp(me)
 		print("Took ", utils.time_elapsed(time.time() - start))
 		return txt
-	
-	threading.Thread(target=app.run, kwargs={"host": flaskcfg['host'], "port": flaskcfg['port']}).start()
+	kwargs = {"host": flaskcfg['host'], "port": flaskcfg['port']}
+	if flaskcfg['auto'] == True: kwargs = {}
+	threading.Thread(target=app.run, kwargs=kwargs).start()
 
 loop.create_task(me.begin())
 loop.create_task(me.main_loop())
