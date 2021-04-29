@@ -182,6 +182,10 @@ class Stalker(Prodict):
 	def init(self):
 		self.time_found = now()
 
+class Stalkee(Prodict): #someone that you just so happen to be counter-stalking. or maybe you're stalking them even though they aren't stalking you.
+	activities:		dict[str, LongHistory] #to keep track of what they do. with fine details, yaknow?
+	pass
+
 class SaveData(Prodict):
 	servers:				dict[str, Server]
 	users:					dict[str, User]
@@ -189,6 +193,7 @@ class SaveData(Prodict):
 	stalkers:				dict[str, Stalker]
 	first_time:				bool
 	user_discovery:			list[tuple[int, datetime]] #list of newly discovered users
+	montitored_users:		dict[str, Stalkee]
 	def init(self):
 		self.servers = {}
 		self.first_time = True

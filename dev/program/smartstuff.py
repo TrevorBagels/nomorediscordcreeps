@@ -76,8 +76,9 @@ class RelatedServerFinder:
 					for y in self.clusters[x]:
 						do_not_count.append(y)
 				else:
-					print(self.clusters)
-					sys.exit()
+					print("We need to restart the program to reanalyze server clusters. This is likely due to you joining or leaving a server.")
+					#print(self.clusters)
+					#sys.exit()
 				filtered_server_list.append(x)
 		
 		return filtered_server_list

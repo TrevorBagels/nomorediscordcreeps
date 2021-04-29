@@ -6,7 +6,10 @@
 	--button: #280055;
 	--messages: #1f0a38;
 }
-
+a, a:focus, a:visited {
+	color: rgb(149, 255, 190);
+	text-decoration: none;
+}
 html {
 	color: var(--textcolor);
 	background-color: var(--background);

@@ -224,38 +224,39 @@ class Me(discord.Client):
 		me_req = self.get(f"https://discord.com/api/v9/users/{self.user.id}/profile", headers=self.auth)
 		profile:D.Profile_API = D.Profile_API.from_dict(me_req.json())
 		for guild in profile.mutual_guilds:
-			channels = self.get(f"https://discord.com/api/v9/guilds/{guild.id}/channels", headers=self.auth)
-			for c in channels.json():
-				if c['type'] != 0 or 'last_message_id' not in c: continue
-				#get the channel permissions (removed this because it doesn't work or something and i'm tired)
-				"""
-				channel = self.get_channel(c['id'])
-				me = self.get_guild(guild.id).get_member(self.user.id)
-				print(me)
-				perms = channel.permissions_for(me)
-				if (perms.view_channel and perms.read_messages) == False: continue
-				"""
-				last_message = c['last_message_id']
-				
-				for i in range(self.config.scrape_amount):
-					msgs = self.get(f"https://discord.com/api/v9/channels/{c['id']}/messages?before={last_message}&limit=50", headers=self.auth).json()
-					for x in msgs:
-						if type(x) == str: 
-							msgs = "NO" * 100 #thats more than 50, so it should break the loop and skip this channel
-							break
-						if 'bot' not in x['author']:
-							x['author']['bot'] = False
-						self.process_user(int(x['author']['id']), server=int(guild.id), name=x['author']['username'], disc=x['author']['discriminator'], bot=x['author']['bot'])
-						last_message = x['id']
-					if len(msgs) < 50:
-						break
-					await asyncio.sleep(.08)
-			
-			print(f"scraped {guild.id}")
+			await self.scrape_server(guild.id)
 		#endregion
 		print('initial scrape done!')
 		
+	async def scrape_server(self, guild_id):
+		channels = self.get(f"https://discord.com/api/v9/guilds/{guild_id}/channels", headers=self.auth)
+		for c in channels.json():
+			if c['type'] != 0 or 'last_message_id' not in c: continue
+			#get the channel permissions (removed this because it doesn't work or something and i'm tired)
+			"""
+			channel = self.get_channel(c['id'])
+			me = self.get_guild(guild.id).get_member(self.user.id)
+			print(me)
+			perms = channel.permissions_for(me)
+			if (perms.view_channel and perms.read_messages) == False: continue
+			"""
+			last_message = c['last_message_id']
+			
+			for i in range(self.config.scrape_amount):
+				msgs = self.get(f"https://discord.com/api/v9/channels/{c['id']}/messages?before={last_message}&limit=50", headers=self.auth).json()
+				for x in msgs:
+					if type(x) == str: 
+						msgs = "NO" * 100 #thats more than 50, so it should break the loop and skip this channel
+						break
+					if 'bot' not in x['author']:
+						x['author']['bot'] = False
+					self.process_user(int(x['author']['id']), server=int(guild_id), name=x['author']['username'], disc=x['author']['discriminator'], bot=x['author']['bot'])
+					last_message = x['id']
+				if len(msgs) < 50:
+					break
+				await asyncio.sleep(.08)
 		
+		print(f"scraped {guild_id}")
 					
 					
 					
@@ -285,7 +286,8 @@ class Me(discord.Client):
 			if name is not None: 
 				self.data.users[str(user_id)].username = name
 				self.data.users[str(user_id)].discriminator = disc
-		
+		if self.data.users[str(user_id)].discriminator == None and disc != None:
+			self.data.users[str(user_id)].discriminator = disc
 		if int(user_id) not in self.ignore_users and (now() - self.data.users[str(user_id)].last_profile_check).total_seconds() / 60 >= self.config.check_frequency and user_id not in self.data.user_processing_queue:
 			self.data.user_processing_queue.append(user_id)
 		if server is not None and int(server) not in self.data.users[str(user_id)].servers: #add server if provided

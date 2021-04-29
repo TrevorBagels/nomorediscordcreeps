@@ -53,7 +53,7 @@ def get_server_messages(me:Me, server:D.Server) -> str:
 		if x[2] not in channels_messages:
 			channels_messages[x[2]] = []
 		channels_messages[x[2]].append(D.Prodict.from_dict({
-			"timestamp": x[0].astimezone(datetime.timezone.utc),
+			"timestamp": utc2local(x[0].astimezone(datetime.timezone.utc)),
 			"time": utc2local(x[0].astimezone(datetime.timezone.utc)).strftime("%H:%M"),
 			"author": getname(me.data.users[str(x[1])]),
 			"message": pt(x[3])
@@ -69,7 +69,7 @@ def get_server_messages(me:Me, server:D.Server) -> str:
 	txt = ""
 	for c in top3:
 		messages = channels_messages[c][-20:]
-		channel_text = f"<div class='channel'><span class='channelname'>#{server.channels[str(c)].channel_name}</span>"
+		channel_text = f"<div class='channel'><span class='channelname'><a target='_blank' href='https://discord.com/channels/{server.server_id}/{c}'>#{server.channels[str(c)].channel_name}</a></span>"
 		prev_author = None
 		for i, m in enumerate(messages):
 			if prev_author != m.author:
@@ -100,6 +100,8 @@ def display_servers(me:Me) -> str:
 	servers = ""
 	sorted_servers = []
 	def sort_server(item):
+		if len(item.rate_history.five_minute_cache) < 1:
+			return 0
 		return item.rate_history.five_minute_cache[len(item.rate_history.five_minute_cache) - 1][1]
 	for _, server in me.data.servers.items(): sorted_servers.append(server)
 	
@@ -125,8 +127,9 @@ def utc2local(utc) -> datetime.datetime:
 	return utc + offset
 
 
-def make_dataset(label, data, bg=(40, 40, 80)):
-	return f"""{{label: "{label}", backgroundColor: "rgb({bg[0]}, {bg[1]}, {bg[2]})", borderColor: "rgb({bg[0]*1.5}, {bg[1]*1.5}, {bg[2]*2.5})", data: {data} }}"""
+def make_dataset(label, data, bg=(40, 40, 80), hidden=False):
+
+	return f"""{{label: "{label}", backgroundColor: "rgb({bg[0]}, {bg[1]}, {bg[2]})", borderColor: "rgb({bg[0]*1.5}, {bg[1]*1.5}, {bg[2]*2.5})", data: {data}, hidden: {str(hidden).lower()} }}"""
 
 def chart(data:list[tuple[datetime.datetime, int]], id, extra_data:list[tuple[datetime.datetime, int]]=[]) -> str:
 	txt = f"<canvas id='{id}'></canvas>"
@@ -146,7 +149,7 @@ def chart(data:list[tuple[datetime.datetime, int]], id, extra_data:list[tuple[da
 			data3[index] = a[1]
 	
 	
-	datastring = f"""{{labels: {labels}, datasets: [{make_dataset("Messages", data2)}, {make_dataset("Member Discovery", data3, bg=(80, 40, 40))} ]}}"""
+	datastring = f"""{{labels: {labels}, datasets: [{make_dataset("Messages", data2)}, {make_dataset("Member Discovery", data3, bg=(80, 40, 40), hidden=True)} ]}}"""
 
 	configstring = f"""
 	{{
