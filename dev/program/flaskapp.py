@@ -12,6 +12,7 @@ def appdisplay(me:Me):
 	style = f"<style>{CSS}</style>"
 	#style = f"""<link rel="stylesheet" type="text/css" href="{url_for('static', filename='styles/flaskapp.css')}">"""
 	main = "<div id='dashboard'>\n"
+	main += f"Uptime: {utils.time_elapsed_1((D.now() - me.start_time).total_seconds())}<br>"
 	main += f"Processing queue ({len(me.data.user_processing_queue)}): <span id='pq'>"
 	pq = "  "
 	for x in me.data.user_processing_queue:
@@ -31,7 +32,7 @@ def appdisplay(me:Me):
 	
 	body += f"<div id='servers'><h2>Servers ({len(me.data.servers)})</h2><div>" + display_servers(me) + "</div></div>"
 	jqueryscript = """<script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>"""
-	return jqueryscript + "<title>ass</title><script src='https://cdn.jsdelivr.net/npm/chart.js'></script>" + style + "<body>" + body + "</body>"
+	return jqueryscript + "<title>ass</title><script src='https://cdn.jsdelivr.net/npm/chart.js'></script><script>Chart.defaults.elements.point.radius = 1; Chart.defaults.elements.point.hitRadius = 3</script>" + style + "<body>" + body + "</body>"
 
 
 def pt(txt): #process text, removing any < / >
@@ -59,7 +60,7 @@ def display_servers(me:Me) -> str:
 		<p style='float: right;'>Members documented: {len(server.members)}<br>
 		ID: <code>{server.server_id}</code><br>
 		</p></div>
-		{chart(server.rate_history.five_minute_cache[-70:], server.server_id)}
+		{chart(server.rate_history.five_minute_cache[-70:], server.server_id, extra_data=server.member_history.five_minute_cache[-70:])}
 		"""
 		s += "</div>"
 		servers += s
@@ -70,14 +71,31 @@ def utc2local(utc) -> datetime.datetime:
 	offset = datetime.datetime.fromtimestamp(epoch) - datetime.datetime.utcfromtimestamp(epoch)
 	return utc + offset
 
-def chart(data:list[tuple[datetime.datetime, int]], id) -> str:
+
+def make_dataset(label, data, bg=(40, 40, 80)):
+	return f"""{{label: "{label}", backgroundColor: "rgb({bg[0]}, {bg[1]}, {bg[2]})", borderColor: "rgb({bg[0]*1.5}, {bg[1]*1.5}, {bg[2]*2.5})", data: {data} }}"""
+
+def chart(data:list[tuple[datetime.datetime, int]], id, extra_data:list[tuple[datetime.datetime, int]]=[]) -> str:
 	txt = f"<canvas id='{id}'></canvas>"
 	labels = []
 	data2 = []
+	data3 = []
 	for a in data:
 		labels.append(utc2local(a[0]).strftime("%H:%M"))
+		if type(a[1]) != int: print(a)
 		data2.append(a[1])
-	datastring = f"""{{labels: {labels}, datasets: [{{label: "Messages", backgroundColor: "rgb(40, 40, 80)", borderColor: "rgb(60, 60, 180)", data: {data2} }}]}}"""
+		data3.append(0)
+	
+	for a in extra_data:
+		datestring = utc2local(a[0]).strftime("%H:%M")
+		print(datestring)
+		if datestring in labels:
+			index = labels.index(datestring)
+			data3[index] = a[1]
+	
+	
+	datastring = f"""{{labels: {labels}, datasets: [{make_dataset("Messages", data2)}, {make_dataset("Member Discovery", data3, bg=(80, 40, 40))} ]}}"""
+
 	configstring = f"""
 	{{
 		type: 'line',
@@ -101,7 +119,9 @@ def servers(me:Me, server_ids):
 
 def recently_discovered(me:Me):
 	txt = "<table>"
-	for x in me.data.user_discovery[-25:]:
+	userhistory = me.data.user_discovery[-25:].copy()
+	userhistory.sort(reverse=True)
+	for x in userhistory:
 		user = me.data.users[str(x[1])]
 		servs = ""
 		for s in servers(me, user.servers):

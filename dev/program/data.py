@@ -1,6 +1,7 @@
 #contains the data structure for things
 
-from discord import message
+from collections import UserDict
+from discord import channel, message
 from prodict import Prodict
 from datetime import datetime, timedelta
 from .utils import now
@@ -70,6 +71,8 @@ class LongHistory(Prodict):
 	interval_speed:		int	#how many seconds between each update. default is 30
 	five_minute_cache:	list[tuple[datetime, int]] #a list of data from history_hour. This list isn't cleared, though, instead, it starts clearing itself after it reaches a length of 240
 	hourly_cache:		list[tuple[datetime, int]] #same as five minute cache, but for each hour. length = 14 days (336 items)
+	auto_reset:			bool
+
 	def init(self):
 		self.current_count = 0
 		self.measure_start = now()
@@ -80,6 +83,7 @@ class LongHistory(Prodict):
 		self.interval_speed		= 30
 		self.five_minute_cache = self.history_hour.copy()
 		self.hourly_cache = self.history_day.copy() 
+		self.auto_reset = True
 	
 	def time_range(self, values:list[tuple[datetime, int]]):
 		if len(values) < 1:
@@ -93,15 +97,19 @@ class LongHistory(Prodict):
 
 	def get_totals(self, values:list[tuple[datetime, int]]) -> tuple:
 		total_values = 0
-		for x in values:
-			total_values += x[1]
+		if self.auto_reset == True:
+			for x in values:
+				total_values += x[1]
+		elif len(values) > 0:
+			total_values = values[len(values)-1][1]
 		return (values[0][0], total_values)
 
 	def take_measurement(self, timestamp=None):
 		if timestamp == None: timestamp = now()
 		measurement = (self.measure_start, self.current_count)
 		self.history_seconds.append(measurement)
-		self.current_count = 0
+		if self.auto_reset:
+			self.current_count = 0
 		self.measure_start = timestamp
 		#do we need to clear the seconds, and push it to five minute intervals?
 		#add timedelta(seconds=30) because each interval is 30 seconds, but we only record the start of the interval. this makes up for the ending part of the interval / the interval length
@@ -115,7 +123,7 @@ class LongHistory(Prodict):
 		self.history_seconds = []
 		#update when we reach a new hour
 		need_update = self.history_hour[0][0].hour != self.history_hour[len(self.history_hour)-1][0].hour
-		need_update = self.time_range(self.history_hour) + timedelta(minutes=5) >= timedelta(hours=1)
+		#need_update = self.time_range(self.history_hour) + timedelta(minutes=5) >= timedelta(hours=1)
 		if need_update: self.update_day()
 
 	def update_day(self): #resets history_hour, adds the total to history_day
@@ -136,15 +144,36 @@ class LongHistory(Prodict):
 
 
 
-
+class Channel(Prodict):
+	channel_id:		int
+	channel_name:	str
+	
 
 class Server(Prodict):
 	server_id:		int
 	server_name:	str
 	members:		dict[str, Member]
 	rate_history:	LongHistory
+	member_history:	LongHistory
+	channels:		dict[str, Channel] #channel ID, channel name
+	recent_messages:	list[tuple[datetime, int, int, str]] #time of message, user ID, channel ID, message content. fixed size of 50.
+	
 	def init(self):
 		self.rate_history = LongHistory()
+		self.member_history = LongHistory(auto_reset=False)
+		self.recent_messages = []
+		self.channels = {}
+	
+	def process_channel(self, channel_id, channel_name):
+		if str(channel_id) not in self.channels:
+			self.channels[str(channel_id)] = Channel(channel_id = channel_id, channel_name = channel_name)
+
+
+	def on_message(self, timestamp:datetime, user_id:int, channel_id:int, content:str):
+		self.recent_messages.append((timestamp, user_id, channel_id, content))
+		if len(self.recent_messages) > 50:
+			self.recent_messages.pop(0)
+		
 
 class Stalker(Prodict):
 	user_id:		int

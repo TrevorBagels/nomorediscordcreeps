@@ -50,6 +50,7 @@ class Me(discord.Client):
 		self.last_save = now()
 		self.token = self.config.token
 		self.load()
+		self.start_time = now()
 		self.measure_message_rates()
 		self.cluster_finder = smartstuff.RelatedServerFinder(self)
 		self.notifier = Notifier(self)
@@ -62,6 +63,19 @@ class Me(discord.Client):
 		self.ignore_users = self.config.ignore_users.copy()
 		self.last_rate_measurement = time.time()
 		self.message_rate_watcher.start()
+		#for repairing (04/28/21)
+		"""
+		for _, s in self.data.servers.items():
+			del s["member_history"]
+			to_repair = [s.rate_history.history_hour, s.rate_history.history_day, s.rate_history.five_minute_cache, s.rate_history.hourly_cache]
+			for r in to_repair:
+				for i, x in enumerate(r):
+					if type(x[1]) != int:
+						r[i] = (x[0], x[1][1])
+		print("done")
+		time.sleep(5)
+		self.save()
+		"""
 		discord.Client.__init__(self, self_bot=True)
 	
 	def ignore_user(self, user_id):
@@ -78,6 +92,8 @@ class Me(discord.Client):
 		print("Measure rates")
 		for _, server in self.data.servers.items():
 			server.rate_history.take_measurement()
+			server.member_history.current_count = len(server.members)
+			server.member_history.take_measurement()
 		self.last_rate_measurement = time.time()
 
 
@@ -137,10 +153,13 @@ class Me(discord.Client):
 	async def on_message(self, message: discord.Message): #this always works, so we can just do a check on the mentions and the author
 		if message.guild != None and int(message.guild.id) in self.config.ignore_servers:
 			return
-		if message.guild != None: self.process_server(message.guild.id, name=message.guild.name)
 		server = None
-		if message.guild != None:
+		if message.guild != None: 
+			self.process_server(message.guild.id, name=message.guild.name)
 			server = message.guild.id
+			svr = self.data.servers[str(server)]
+			svr.process_channel(message.channel.id, message.channel.name)
+			svr.on_message(message.created_at, message.author.id, message.channel.id, message.content)
 		if server != None:
 			self.data.servers[str(server)].rate_history.current_count += 1
 		joined_at = None

@@ -35,13 +35,24 @@ def time_elapsed(seconds):
 		return f"{'%02d' % minutes}m {'%02d' % (seconds - minutes*60)}s"
 	return hms(seconds)
 
+def pluralize(word, value, plural=None, include_value=True):
+	if include_value: word = str(value) + " " + word
+	if plural == None: plural = word + "s"
+	if float(value) == 1.0: return word
+	return plural
+
 def time_elapsed_1(seconds):
 	if seconds < 60:
-		return f"{'%02d' % seconds} seconds"
+		return pluralize("second", int(seconds))
 	minutes = seconds // 60
 	if minutes < 60:
 		return f"{'%02d' % round(minutes + seconds/60, 1)} minutes"
-	return hms(seconds)
+	hours = minutes // 60
+	if hours < 24:
+		return f"{'%02d' % round(hours + minutes/60, 1)} hours"
+	days = hours // 24
+
+	return f"{pluralize('day', days)}, " + f"{'%02d' % round(hours + minutes/60, 1)} hours"
 
 def round_seconds_datetime(dt: datetime) -> datetime:
     if dt.microsecond >= 500_000:
