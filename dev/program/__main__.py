@@ -1,7 +1,6 @@
-import asyncio, os, sys, time
+import asyncio, os, sys, time, json
 from . import utils
 from .main import Me
-from flask import Flask
 import threading
 
 
@@ -14,29 +13,36 @@ if os.path.exists("data.json") == False:
 	with open("data.json", "w+") as f:
 		f.write("{}")
 
+with open("flask_config.json", "r") as f: flaskcfg = json.loads(f.read())
+
+
+
 loop = asyncio.get_event_loop()
 me = Me()
-app = Flask(__name__, static_folder="./program/static")
 
-from .flaskapp import appdisplay as appdisp
-from flask import request
-@app.route("/ignore_user", methods=["POST"])
-def ignore_user():
-	print("IGNORE USER REQUEST RECEIVED")
-	user_id = request.form["user_id"]
-	me.ignore_user(user_id)
-	del me.data.stalkers[str(user_id)]
-	return appdisplay()
-@app.route("/", methods=['GET', 'POST'])
-def appdisplay():
-	print("GET DISPLAY")
-	start = time.time()
-	txt =  appdisp(me)
-	print("Took ", utils.time_elapsed(time.time() - start))
-	return txt
+if flaskcfg["disabled"] == False:
+	from flask import Flask
+	from flask import request
+	app = Flask(__name__, static_folder="./program/static")
+	from .flaskapp import appdisplay as appdisp
 	
-
-threading.Thread(target=app.run, kwargs={"host": '0.0.0.0', "port": 81}).start()
+	@app.route("/ignore_user", methods=["POST"])
+	def ignore_user():
+		print("IGNORE USER REQUEST RECEIVED")
+		user_id = request.form["user_id"]
+		me.ignore_user(user_id)
+		del me.data.stalkers[str(user_id)]
+		return appdisplay()
+	
+	@app.route("/", methods=['GET', 'POST'])
+	def appdisplay():
+		print("GET DISPLAY")
+		start = time.time()
+		txt =  appdisp(me)
+		print("Took ", utils.time_elapsed(time.time() - start))
+		return txt
+	
+	threading.Thread(target=app.run, kwargs={"host": flaskcfg['host'], "port": flaskcfg['port']}).start()
 
 loop.create_task(me.begin())
 loop.create_task(me.main_loop())

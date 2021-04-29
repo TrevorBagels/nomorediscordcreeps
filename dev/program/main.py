@@ -21,12 +21,14 @@ class Config(prodict.Prodict):
 	pushover_user:			str
 	bots_can_stalk:			bool #ignore bots
 	friends_can_stalk:		bool #ignore friends
-	scrape_amount:			int #amount of messages to scrape for the initial scrape, divided by 50.
+	scrape_amount:			int #amount of messages to scrape for the initial scrape, divided by 50. default is one (so it scrapes the last 50 messages from each channel)
 	scrape_guild_count:		int #max amount of guilds to scrape on the initial scrape. default = 100
 	false_positive_level:	int #how many people need to be found in clusters of servers for that cluster of servers to be considered a related server cluster?
 	block_scanning:			bool #whether to stop scanning user profiles. used when getting ratelimited
 	disable_stalker_flagging:	bool #set this to true if you don't want to check for stalkers. this is automatically true while doing an initial scan
 	disable_profile_api_calls:	bool #set this to true if you don't want to run fully_process_user. this also disabled stalker flagging.
+	max_servers_to_scrape:	int #how many servers do you want the initial scrape to cover?
+	max_channels_to_scrape:	int #how many channels to scrape per server
 	def init(self):
 		self.ignore_servers = []
 		self.ignore_users = []
@@ -40,6 +42,8 @@ class Config(prodict.Prodict):
 		self.scrape_guild_count = 100
 		self.disable_stalker_flagging = False
 		self.disable_profile_api_calls = False
+		self.max_channels_to_scrape = 20
+		self.max_servers_to_scrape = 100
 
 
 class Me(discord.Client):
@@ -128,7 +132,6 @@ class Me(discord.Client):
 		print(self.user.display_name + " connected to Discord!")
 		if self.user.id not in self.ignore_users:
 			self.ignore_users.append(self.user.id)
-		
 		if self.config.friends_can_stalk == False:
 			for x in self.get_friends():
 				if x not in self.ignore_users:
@@ -177,16 +180,19 @@ class Me(discord.Client):
 	
 	async def main_loop(self):
 		while True:
+			getting_ready_printed_already = False
 			while self.has_connected == False:
-				print("getting ready...")
-				await asyncio.sleep(.1)
+				if getting_ready_printed_already == False:
+					print("getting ready...")
+					getting_ready_printed_already = True
+				await asyncio.sleep(.3)
 			#check on new members in the queue
 			if self.config.block_scanning == False:
 				for i in range(2):
 					if len(self.data.user_processing_queue) > 0:
 						#process user
 						req = await self.fully_process_user(self.data.user_processing_queue[0]) #!makes api calls
-						#because i'm scared of ratelimiting
+						#because i'm scared of ratelimiting. note: this doesn't really happen anymore, i've "perfected" the program to not exceed ratelimits. but it's still here because, you know, paranoia.
 						if "ratelimit" in req.content.decode().lower() or "ratelimit" in str(req.headers).lower():
 							print("VVV RATELIMITING? VVV")
 							print(req.content.decode())
@@ -223,14 +229,20 @@ class Me(discord.Client):
 		#region scraping stuff
 		me_req = self.get(f"https://discord.com/api/v9/users/{self.user.id}/profile", headers=self.auth)
 		profile:D.Profile_API = D.Profile_API.from_dict(me_req.json())
+		servers_scraped = 0
 		for guild in profile.mutual_guilds:
+			if servers_scraped >= self.config.max_servers_to_scrape: break
 			await self.scrape_server(guild.id)
+			servers_scraped += 1
 		#endregion
-		print('initial scrape done!')
+		print('initial scrape done!', "scraped", servers_scraped, "server(s)")
 		
 	async def scrape_server(self, guild_id):
 		channels = self.get(f"https://discord.com/api/v9/guilds/{guild_id}/channels", headers=self.auth)
+		channels_scraped = 0
 		for c in channels.json():
+			if channels_scraped >= self.config.max_channels_to_scrape:
+				break
 			if c['type'] != 0 or 'last_message_id' not in c: continue
 			#get the channel permissions (removed this because it doesn't work or something and i'm tired)
 			"""
@@ -241,12 +253,12 @@ class Me(discord.Client):
 			if (perms.view_channel and perms.read_messages) == False: continue
 			"""
 			last_message = c['last_message_id']
-			
 			for i in range(self.config.scrape_amount):
 				msgs = self.get(f"https://discord.com/api/v9/channels/{c['id']}/messages?before={last_message}&limit=50", headers=self.auth).json()
 				for x in msgs:
-					if type(x) == str: 
+					if type(x) == str: #this happens when we don't have access to the channel.
 						msgs = "NO" * 100 #thats more than 50, so it should break the loop and skip this channel
+						channels_scraped -= 1
 						break
 					if 'bot' not in x['author']:
 						x['author']['bot'] = False
@@ -254,6 +266,7 @@ class Me(discord.Client):
 					last_message = x['id']
 				if len(msgs) < 50:
 					break
+				channels_scraped += 1
 				await asyncio.sleep(.08)
 		
 		print(f"scraped {guild_id}")

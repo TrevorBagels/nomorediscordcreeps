@@ -6,5 +6,5 @@
 	"servers_alert_level": 3,
 	"pushover_token": "",
 	"pushover_user": "",
-	"scrape_amount": 2
+	"scrape_amount": 1
 }
