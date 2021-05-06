@@ -47,6 +47,12 @@ def getname(user):
 		name += f"<b>#{user.discriminator}</b>"
 	return name
 
+def get_created(user_id, me):
+	d = me.get_account_creation_date(user_id)
+	d = utc2local(d)
+	return d.strftime("%m/%D, %Y | %H:%M")
+
+
 def get_server_messages(me:Me, server:D.Server) -> str:
 	channels_messages = {}
 	for x in server.recent_messages:
@@ -189,7 +195,7 @@ def display_stalkers(me) -> str:
 	stalkers = ""
 	for _, x in me.data.stalkers.items():
 		u = me.data.users[str(x.user_id)]
-		txt2 = f"<b>{getname(u)}</b><br><code>{u.user_id}</code><br>"
+		txt2 = f"<b>{getname(u)}</b><br><code>{u.user_id}</code><br><code>{get_created(u.user_id, me)}</code><br>"
 		
 		button = f"""<button onclick="$.post('/ignore_user', {{user_id: '{u.user_id}' }}); document.getElementById('stalker{u.user_id}').remove(); document.getElementById('stalkercount').innerHTML -= 1;">Ignore</button>"""
 		txt2 += button

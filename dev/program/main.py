@@ -1,12 +1,15 @@
 from collections import UserDict
-from datetime import datetime
+from datetime import datetime, timedelta
 from discord.ext import tasks
 import discord, prodict, asyncio, json, requests, sys, time
 from bson import json_util
+from requests.sessions import HTTPAdapter
 from . import data as D
 from .utils import now, long_ago
 from .notify import Notifier
 from . import smartstuff
+from requests.packages.urllib3.util.retry import Retry
+
 import faker, random
 
 
@@ -67,6 +70,9 @@ class Me(discord.Client):
 		self.ignore_users = self.config.ignore_users.copy()
 		self.last_rate_measurement = time.time()
 		self.message_rate_watcher.start()
+		self.reqs = requests.Session()
+		retries = Retry(connect=3, backoff_factor=2.5)
+		self.reqs.mount("http://", HTTPAdapter(max_retries=retries))
 		#for repairing (04/28/21)
 		"""
 		for _, s in self.data.servers.items():
@@ -87,9 +93,14 @@ class Me(discord.Client):
 		self.ignore_users.append(user_id)
 
 	def get(self, url, headers={}):
-		req = requests.get(url, headers=headers)
-		#req = self.cloudscraper.get(url, headers=headers)
-		self.req_log.append([url, req.content.decode(), str(req.headers), str(req.cookies)])
+		req = None
+		try:
+			
+			req = self.reqs.get(url, headers=headers)
+			#req = self.cloudscraper.get(url, headers=headers)
+			self.req_log.append([url, req.content.decode(), str(req.headers), str(req.cookies)])
+		except Exception as e:
+			print("Request failed!", "\n", e)
 		return req
 
 	def measure_message_rates(self):
@@ -101,7 +112,12 @@ class Me(discord.Client):
 		self.last_rate_measurement = time.time()
 
 
-			
+	def get_account_creation_date(self, user_id) -> datetime:
+		epoch = (datetime(year=2015, day=1, minute=1, month=1, second=0))
+		binary = format(int(user_id), "b")
+		ms_since_epoch = int(binary[:(len(binary) - 22)], 2)
+		totaltime = epoch + timedelta(milliseconds=ms_since_epoch)
+		return totaltime
 
 	def save(self):
 		print("Saving... Do not stop the program while this operation takes place.")
@@ -239,6 +255,9 @@ class Me(discord.Client):
 		
 	async def scrape_server(self, guild_id):
 		channels = self.get(f"https://discord.com/api/v9/guilds/{guild_id}/channels", headers=self.auth)
+		if channels == None:
+			print("Failed to scrape server! Something went wrong with the request.")
+			return
 		channels_scraped = 0
 		for c in channels.json():
 			if channels_scraped >= self.config.max_channels_to_scrape:
@@ -285,6 +304,8 @@ class Me(discord.Client):
 		
 	def fully_process_server(self, server_id):
 		server_req = self.get(f"https://discord.com/api/v9/guilds/{server_id}", headers=self.auth)
+		if server_req == None:
+			print("Something went wrong when processing server", server_id)
 		if server_req.ok:
 			guild:D.Guild_API = D.Guild_API.from_dict(server_req.json())
 			server = self.data.servers[str(server_id)]
@@ -314,6 +335,10 @@ class Me(discord.Client):
 	async def fully_process_user(self, user_id):
 		if self.config.disable_profile_api_calls: return
 		profile_req = self.get(f"https://discord.com/api/v9/users/{user_id}/profile", headers=self.auth)
+		if profile_req == None:
+			print("Failed to process user ", user_id)
+			print("Something went wrong with the request.")
+			await asyncio.sleep(30) #sleep for a bit, give it a chance to work again
 		if profile_req.ok: #usually fails if the user is a bot
 			profile:D.Profile_API = D.Profile_API.from_dict(profile_req.json())
 			#process user servers
