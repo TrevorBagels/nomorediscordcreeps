@@ -50,7 +50,7 @@ def getname(user):
 def get_created(user_id, me):
 	d = me.get_account_creation_date(user_id)
 	d = utc2local(d)
-	return d.strftime("%m/%D, %Y | %H:%M")
+	return d.strftime("%m/%d, %Y | %H:%M")
 
 
 def get_server_messages(me:Me, server:D.Server) -> str:
