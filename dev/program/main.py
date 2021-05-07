@@ -4,13 +4,13 @@ from discord.ext import tasks
 import discord, prodict, asyncio, json, requests, sys, time
 from bson import json_util
 from requests.sessions import HTTPAdapter
+from urllib3.util.retry import Retry
 from . import data as D
 from .utils import now, long_ago
 from .notify import Notifier
 from . import smartstuff
-from requests.packages.urllib3.util.retry import Retry
 
-import faker, random
+import faker, random, os
 
 
 class Config(prodict.Prodict):
@@ -26,18 +26,20 @@ class Config(prodict.Prodict):
 	friends_can_stalk:		bool #ignore friends
 	scrape_amount:			int #amount of messages to scrape for the initial scrape, divided by 50. default is one (so it scrapes the last 50 messages from each channel)
 	scrape_guild_count:		int #max amount of guilds to scrape on the initial scrape. default = 100
-	false_positive_level:	int #how many people need to be found in clusters of servers for that cluster of servers to be considered a related server cluster?
+	false_positive_level:	int #how many people need to be found in clusters of servers for that cluster of servers to be considered a related server cluster? Lower numbers makes it less likely to find stalkers, higher levels make it more sensitive and more likely to detect false positives. 
 	block_scanning:			bool #whether to stop scanning user profiles. used when getting ratelimited
 	disable_stalker_flagging:	bool #set this to true if you don't want to check for stalkers. this is automatically true while doing an initial scan
 	disable_profile_api_calls:	bool #set this to true if you don't want to run fully_process_user. this also disabled stalker flagging.
 	max_servers_to_scrape:	int #how many servers do you want the initial scrape to cover?
 	max_channels_to_scrape:	int #how many channels to scrape per server
+	create_backups:			bool #whether or not to create backups. this is a good practice, in case you stop the program in the middle of it writing a file.
 	def init(self):
 		self.ignore_servers = []
 		self.ignore_users = []
 		self.check_frequency = 5 #minutes
 		self.servers_alert_level = 3
-		self.save_frequency = 30
+		self.save_frequency = 300
+		self.false_positive_level = 4
 		self.bots_can_stalk = False
 		self.friends_can_stalk = False
 		self.scrape_amount = 1
@@ -47,6 +49,7 @@ class Config(prodict.Prodict):
 		self.disable_profile_api_calls = False
 		self.max_channels_to_scrape = 20
 		self.max_servers_to_scrape = 100
+		self.create_backups = True
 
 
 class Me(discord.Client):
@@ -104,7 +107,7 @@ class Me(discord.Client):
 		return req
 
 	def measure_message_rates(self):
-		print("Measure rates")
+		#print("Measure rates")
 		for _, server in self.data.servers.items():
 			server.rate_history.take_measurement()
 			server.member_history.current_count = len(server.members)
@@ -128,6 +131,19 @@ class Me(discord.Client):
 		with open("requestslog.json", "w+") as f:
 			f.write(json.dumps(self.req_log, default=json_util.default, indent=4))
 		print("Saved!")
+		if self.config.create_backups:
+			print("Creating backups!")
+			if os.path.exists("./backups") == False:
+				os.mkdir("./backups")
+			with open("./backups/data.json", "w") as f:
+				f.write(json.dumps(self.data.to_dict(is_recursive=True), default=json_util.default, indent=4))
+			with open("./backups/config.json", "w+") as f:
+				f.write(json.dumps(self.config.to_dict(is_recursive=True), default=json_util.default, indent=4))
+			with open("./backups/requestslog.json", "w+") as f:
+				f.write(json.dumps(self.req_log, default=json_util.default, indent=4))
+			print("Done!")
+
+
 	
 	def load(self):
 		with open("data.json", "r") as f:
@@ -178,6 +194,7 @@ class Me(discord.Client):
 			server = message.guild.id
 			svr = self.data.servers[str(server)]
 			svr.process_channel(message.channel.id, message.channel.name)
+			#print(message.nonce, "\n", message.content, "\n", message.clean_content, "\n", message.system_content, "\n----")
 			svr.on_message(message.created_at, message.author.id, message.channel.id, message.content)
 		if server != None:
 			self.data.servers[str(server)].rate_history.current_count += 1

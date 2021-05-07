@@ -16,6 +16,7 @@ def appdisplay(me:Me):
 	#style = f"""<link rel="stylesheet" type="text/css" href="{url_for('static', filename='styles/flaskapp.css')}">"""
 	main = "<div id='dashboard'>\n"
 	main += f"Uptime: {utils.time_elapsed_1((D.now() - me.start_time).total_seconds())}<br>"
+	main += f"Saved: {utc2local(me.last_save).strftime('%H:%M:%S')}<br>"
 	main += f"Processing queue ({len(me.data.user_processing_queue)}): <span id='pq'>"
 	pq = "  "
 	for x in me.data.user_processing_queue:
